@@ -38,8 +38,9 @@ from gi.repository import Gtk
 from gi.repository import GLib
 from gi.repository import Nautilus as FileManager
 
-
-SEPARATOR = u'\u2015' * 10
+APPNAME = 'nautilus-convert2mp3'
+ICON = 'nautilus-convert2mp3'
+VERSION = '0.4.0'
 
 _ = str
 
@@ -58,10 +59,10 @@ class IdleObject(GObject.GObject):
 
 class DoItInBackground(IdleObject, Thread):
     __gsignals__ = {
-        'started': (GObject.SIGNAL_RUN_FIRST, GObject.TYPE_NONE, ()),
+        'started': (GObject.SIGNAL_RUN_FIRST, GObject.TYPE_NONE, (int,)),
         'ended': (GObject.SIGNAL_RUN_FIRST, GObject.TYPE_NONE, (bool,)),
         'start_one': (GObject.SIGNAL_RUN_FIRST, GObject.TYPE_NONE, (str,)),
-        'end_one': (GObject.SIGNAL_RUN_FIRST, GObject.TYPE_NONE, ()),
+        'end_one': (GObject.SIGNAL_RUN_FIRST, GObject.TYPE_NONE, (float,)),
     }
 
     def __init__(self, elements):
@@ -75,6 +76,9 @@ class DoItInBackground(IdleObject, Thread):
 
     def stop(self, *args):
         self.stopit = True
+        if self.process is not None:
+            self.process.terminate()
+            self.process = None
 
     def crush_file(self, file_in):
         rutine = 'srm -lvr "%s"' % (file_in)
@@ -83,16 +87,19 @@ class DoItInBackground(IdleObject, Thread):
         out, err = self.process.communicate()
 
     def run(self):
-        self.emit('started')
+        total = 0
+        for element in self.elements:
+            total += get_duration(element)
+        self.emit('started', total)
         try:
+            total = 0
             for element in self.elements:
-                print(element)
                 if self.stopit is True:
                     self.ok = False
                     break
                 self.emit('start_one', element)
                 self.crush_file(element)
-                self.emit('end_one')
+                self.emit('end_one', get_duration(element))
         except Exception as e:
             self.ok = False
         try:
@@ -109,8 +116,10 @@ class Progreso(Gtk.Dialog, IdleObject):
         'i-want-stop': (GObject.SIGNAL_RUN_FIRST, GObject.TYPE_NONE, ()),
     }
 
-    def __init__(self, title, parent, max_value):
-        Gtk.Dialog.__init__(self, title, parent)
+    def __init__(self, title, parent):
+        Gtk.Dialog.__init__(self, title, parent,
+                            Gtk.DialogFlags.MODAL |
+                            Gtk.DialogFlags.DESTROY_WITH_PARENT)
         IdleObject.__init__(self)
         self.set_position(Gtk.WindowPosition.CENTER_ALWAYS)
         self.set_size_request(330, 30)
@@ -151,8 +160,10 @@ class Progreso(Gtk.Dialog, IdleObject):
                      xoptions=Gtk.AttachOptions.SHRINK)
         self.stop = False
         self.show_all()
-        self.max_value = max_value
         self.value = 0.0
+
+    def set_max_value(self, anobject, max_value):
+        self.max_value = float(max_value)
 
     def get_stop(self):
         return self.stop
@@ -164,15 +175,19 @@ class Progreso(Gtk.Dialog, IdleObject):
     def close(self, *args):
         self.destroy()
 
-    def set_element(self, anobject, element):
-        self.label.set_text(_('Crushing: %s') % element)
-
-    def increase(self, anobject):
-        self.value += 1.0
+    def increase(self, anobject, value):
+        self.value += float(value)
         fraction = self.value/self.max_value
         self.progressbar.set_fraction(fraction)
-        if self.value == self.max_value:
+        if self.value >= self.max_value:
             self.hide()
+
+    def set_element(self, anobject, element):
+        self.label.set_text(_('Converting: %s') % element)
+
+
+def get_duration(file_in):
+    return os.path.getsize(file_in)
 
 
 def get_files(files_in):
@@ -205,10 +220,11 @@ class CrushFileMenuProvider(GObject.GObject, FileManager.MenuProvider):
                 return False
         return True
 
-    def convert(self, menu, selected):
+    def convert(self, menu, selected, window):
         files = get_files(selected)
         diib = DoItInBackground(files)
-        progreso = Progreso(_('Crush file'), None, len(files))
+        progreso = Progreso(_('Crush file'), window, len(files))
+        diib.connect('started', progreso.set_max_value)
         diib.connect('start_one', progreso.set_element)
         diib.connect('end_one', progreso.increase)
         diib.connect('ended', progreso.close)
@@ -224,10 +240,57 @@ class CrushFileMenuProvider(GObject.GObject, FileManager.MenuProvider):
         """
         if self.all_are_files(sel_items):
             top_menuitem = FileManager.MenuItem(
-                name='CrushFileMenuProvider::Gtk-crushing-files',
+                name='CrushFileMenuProvider::Gtk-crushing-top',
                 label=_('Crush') + '...',
                 tip=_('Tool to crush files'))
-            top_menuitem.connect('activate', self.convert, sel_items)
+            submenu = FileManager.Menu()
+            top_menuitem.set_submenu(submenu)
+
+            sub_menuitem_00 = FileManager.MenuItem(
+                name='CrushFileMenuProvider::Gtk-crushing-sub-01',
+                label=_('Crush'),
+                tip=_('Tool to crush files'))
+            sub_menuitem_00.connect('activate',
+                                    self.convert,
+                                    sel_items,
+                                    window)
+            submenu.append_item(sub_menuitem_00)
+            sub_menuitem_01 = FileManager.MenuItem(
+                name='CrushFileMenuProvider::Gtk-crushing-sub-02',
+                label=_('About'),
+                tip=_('About'))
+            sub_menuitem_01.connect('activate', self.about, window)
+            submenu.append_item(sub_menuitem_01)
             #
             return top_menuitem,
         return
+
+    def about(self, widget, window):
+        ad = Gtk.AboutDialog(parent=window)
+        ad.set_name(APPNAME)
+        ad.set_version(VERSION)
+        ad.set_copyright('Copyrignt (c) 2016\nLorenzo Carbonell')
+        ad.set_comments(APPNAME)
+        ad.set_license('''
+This program is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later
+version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with
+this program. If not, see <http://www.gnu.org/licenses/>.
+''')
+        ad.set_website('http://www.atareao.es')
+        ad.set_website_label('http://www.atareao.es')
+        ad.set_authors([
+            'Lorenzo Carbonell <lorenzo.carbonell.cerezo@gmail.com>'])
+        ad.set_documenters([
+            'Lorenzo Carbonell <lorenzo.carbonell.cerezo@gmail.com>'])
+        ad.set_icon_name(ICON)
+        ad.set_logo_icon_name(APPNAME)
+        ad.run()
+        ad.destroy()
