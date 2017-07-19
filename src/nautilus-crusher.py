@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # This file is part of nautilus-convert2ogg
@@ -24,94 +24,33 @@
 import gi
 try:
     gi.require_version('Gtk', '3.0')
+    gi.require_version('Gio', '2.0')
+    gi.require_version('GLib', '2.0')
+    gi.require_version('GObject', '2.0')
     gi.require_version('Nautilus', '3.0')
 except Exception as e:
     print(e)
     exit(-1)
+from gi.repository import Gtk
+from gi.repository import Gio
+from gi.repository import GLib
+from gi.repository import GObject
+from gi.repository import Nautilus as FileManager
 import os
 import subprocess
 import shlex
-from threading import Thread
-from urllib import unquote_plus
-from gi.repository import GObject
-from gi.repository import Gtk
-from gi.repository import GLib
-from gi.repository import Nautilus as FileManager
+from multiprocessing import cpu_count
+from concurrent import futures
 
-APPNAME = 'nautilus-convert2mp3'
-ICON = 'nautilus-convert2mp3'
-VERSION = '0.4.0'
+THREADS = 5 * cpu_count()
+APPNAME = '$APP$'
+ICON = '$APP$'
+VERSION = '$VERSION$'
 
 _ = str
 
 
-class IdleObject(GObject.GObject):
-    """
-    Override GObject.GObject to always emit signals in the main thread
-    by emmitting on an idle handler
-    """
-    def __init__(self):
-        GObject.GObject.__init__(self)
-
-    def emit(self, *args):
-        GLib.idle_add(GObject.GObject.emit, self, *args)
-
-
-class DoItInBackground(IdleObject, Thread):
-    __gsignals__ = {
-        'started': (GObject.SIGNAL_RUN_FIRST, GObject.TYPE_NONE, (int,)),
-        'ended': (GObject.SIGNAL_RUN_FIRST, GObject.TYPE_NONE, (bool,)),
-        'start_one': (GObject.SIGNAL_RUN_FIRST, GObject.TYPE_NONE, (str,)),
-        'end_one': (GObject.SIGNAL_RUN_FIRST, GObject.TYPE_NONE, (float,)),
-    }
-
-    def __init__(self, elements):
-        IdleObject.__init__(self)
-        Thread.__init__(self)
-        self.elements = elements
-        self.stopit = False
-        self.ok = True
-        self.daemon = True
-        self.process = None
-
-    def stop(self, *args):
-        self.stopit = True
-        if self.process is not None:
-            self.process.terminate()
-            self.process = None
-
-    def crush_file(self, file_in):
-        rutine = 'srm -lvr "%s"' % (file_in)
-        args = shlex.split(rutine)
-        self.process = subprocess.Popen(args, stdout=subprocess.PIPE)
-        out, err = self.process.communicate()
-
-    def run(self):
-        total = 0
-        for element in self.elements:
-            total += get_duration(element)
-        self.emit('started', total)
-        try:
-            total = 0
-            for element in self.elements:
-                if self.stopit is True:
-                    self.ok = False
-                    break
-                self.emit('start_one', element)
-                self.crush_file(element)
-                self.emit('end_one', get_duration(element))
-        except Exception as e:
-            self.ok = False
-        try:
-            if self.process is not None:
-                self.process.terminate()
-                self.process = None
-        except Exception as e:
-            print(e)
-        self.emit('ended', self.ok)
-
-
-class Progreso(Gtk.Dialog, IdleObject):
+class Progreso(Gtk.Dialog):
     __gsignals__ = {
         'i-want-stop': (GObject.SIGNAL_RUN_FIRST, GObject.TYPE_NONE, ()),
     }
@@ -120,7 +59,6 @@ class Progreso(Gtk.Dialog, IdleObject):
         Gtk.Dialog.__init__(self, title, parent,
                             Gtk.DialogFlags.MODAL |
                             Gtk.DialogFlags.DESTROY_WITH_PARENT)
-        IdleObject.__init__(self)
         self.set_position(Gtk.WindowPosition.CENTER_ALWAYS)
         self.set_size_request(330, 30)
         self.set_resizable(False)
@@ -159,11 +97,17 @@ class Progreso(Gtk.Dialog, IdleObject):
                      ypadding=5,
                      xoptions=Gtk.AttachOptions.SHRINK)
         self.stop = False
-        self.show_all()
-        self.value = 0.0
+        self.current_size = 0.0
+        self.total_size = 0.0
+        self.is_running = False
 
-    def set_max_value(self, anobject, max_value):
-        self.max_value = float(max_value)
+        self.show_all()
+
+    def emit(self, *args):
+        GLib.idle_add(GObject.GObject.emit, self, *args)
+
+    def set_total_size(self, total_size):
+        self.total_size = float(total_size)
 
     def get_stop(self):
         return self.stop
@@ -175,28 +119,99 @@ class Progreso(Gtk.Dialog, IdleObject):
     def close(self, *args):
         self.destroy()
 
-    def increase(self, anobject, value):
-        self.value += float(value)
-        fraction = self.value/self.max_value
-        self.progressbar.set_fraction(fraction)
-        if self.value >= self.max_value:
-            self.hide()
+    def increase(self, widget=None, x=1.0):
+        self.current_size += float(x)
+        if self.current_size == self.total_size:
+            GLib.idle_add(self.destroy)
+        else:
+            fraction = float(self.current_size) / float(self.total_size)
+            print('////', fraction, '////')
+            if round(fraction, 5) >= 1.0:
+                GLib.idle_add(self.destroy)
+            else:
+                GLib.idle_add(self.progressbar.set_fraction, fraction)
 
-    def set_element(self, anobject, element):
-        self.label.set_text(_('Converting: %s') % element)
+    def set_element(self, widget=None, element=''):
+        GLib.idle_add(self.label.set_text, str(element))
+
+
+def crush_file(file_in, diib):
+    diib.emit('start_one', os.path.basename(file_in))
+    rutine = 'srm -lvr "%s"' % (file_in)
+    args = shlex.split(rutine)
+    process = subprocess.Popen(args, stdout=subprocess.PIPE)
+    out, err = process.communicate()
+    diib.emit('end_one', get_duration(file_in))
+
+
+class DoItInBackground(GObject.GObject):
+    __gsignals__ = {
+        'started': (GObject.SIGNAL_RUN_FIRST, GObject.TYPE_NONE, (int,)),
+        'ended': (GObject.SIGNAL_RUN_FIRST, GObject.TYPE_NONE, (bool,)),
+        'start_one': (GObject.SIGNAL_RUN_FIRST, GObject.TYPE_NONE, (str,)),
+        'end_one': (GObject.SIGNAL_RUN_FIRST, GObject.TYPE_NONE, (float,)),
+    }
+
+    def __init__(self, title, parent, files):
+        GObject.GObject.__init__(self)
+        self.files = files
+        self.stopit = False
+        self.ok = True
+        self.progreso = Progreso(title, parent)
+        self.progreso.set_total_size(get_total_duration(files))
+        self.progreso.connect('i-want-stop', self.stop)
+        self.connect('start_one', self.progreso.set_element)
+        self.connect('end_one', self.progreso.increase)
+        self.connect('ended', self.progreso.close)
+        self.tasks = []
+
+    def emit(self, *args):
+        GLib.idle_add(GObject.GObject.emit, self, *args)
+
+    def stop(self, *args):
+        for task in self.tasks:
+            if task['task'].is_running():
+                task['task'].cancel()
+                self.emit('end_one', get_duration(task['file']))
+
+    def run(self):
+        try:
+            executor = futures.ThreadPoolExecutor()
+            for afile in self.files:
+                if self.stopit is True:
+                    break
+                task = executor.submit(crush_file, afile, self)
+                self.tasks.append({'file': afile,
+                                   'task': task})
+            if self.stopit is True:
+                for task in self.tasks:
+                    if task['task'].is_running():
+                        task['task'].cancel()
+                        self.emit('end_one', get_duration(task['file']))
+            self.progreso.run()
+        except Exception as e:
+            self.ok = False
+            print(e)
+        self.emit('ended', self.ok)
+
+
+def get_total_duration(files):
+    total_duration = 0.0
+    for afile in files:
+        total_duration += float(os.path.getsize(afile))
+    return total_duration
 
 
 def get_duration(file_in):
-    return os.path.getsize(file_in)
+    return float(os.path.getsize(file_in))
 
 
 def get_files(files_in):
     files = []
+    gvfs = Gio.Vfs.get_default()
     for file_in in files_in:
-        print(file_in)
-        file_in = unquote_plus(file_in.get_uri()[7:])
-        if os.path.isfile(file_in):
-            files.append(file_in)
+        print(type(file_in), file_in)
+        files.append(gvfs.get_file_for_uri(file_in.get_uri()).get_path())
     return files
 
 
@@ -214,23 +229,17 @@ class CrushFileMenuProvider(GObject.GObject, FileManager.MenuProvider):
         pass
 
     def all_are_files(self, items):
+        gvfs = Gio.Vfs.get_default()
         for item in items:
-            file_in = unquote_plus(item.get_uri()[7:])
+            file_in = gvfs.get_file_for_uri(item.get_uri()).get_path()
             if not os.path.isfile(file_in):
                 return False
         return True
 
     def convert(self, menu, selected, window):
         files = get_files(selected)
-        diib = DoItInBackground(files)
-        progreso = Progreso(_('Crush file'), window, len(files))
-        diib.connect('started', progreso.set_max_value)
-        diib.connect('start_one', progreso.set_element)
-        diib.connect('end_one', progreso.increase)
-        diib.connect('ended', progreso.close)
-        progreso.connect('i-want-stop', diib.stop)
-        diib.start()
-        progreso.run()
+        diib = DoItInBackground(_('Crush file'), window, files)
+        diib.run()
 
     def get_file_items(self, window, sel_items):
         """
@@ -269,7 +278,7 @@ class CrushFileMenuProvider(GObject.GObject, FileManager.MenuProvider):
         ad = Gtk.AboutDialog(parent=window)
         ad.set_name(APPNAME)
         ad.set_version(VERSION)
-        ad.set_copyright('Copyrignt (c) 2016\nLorenzo Carbonell')
+        ad.set_copyright('Copyrignt (c) 2016-2017\nLorenzo Carbonell')
         ad.set_comments(APPNAME)
         ad.set_license('''
 This program is free software: you can redistribute it and/or modify it under

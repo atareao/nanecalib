@@ -1,8 +1,14 @@
-nautilus-crusher (0.2.0-0extras16.04.1) xenial; urgency=medium
+nautilus-crusher (0.3.0-0extras17.04.1) zesty; urgency=medium
+
+  * Concurrent futures
+
+ -- Lorenzo Carbonell <lorenzo.carbonell.cerezo@gmail.com>  Wed, 19 Jul 2017 12:54:30 +0200
+
+nautilus-crusher (0.2.0-0extras16.04.4) xenial; urgency=medium
 
   * updated icon
 
- -- Lorenzo Carbonell <lorenzo.carbonell.cerezo@gmail.com>  Sun, 18 Dec 2016 10:41:04 +0100
+ -- Lorenzo Carbonell <lorenzo.carbonell.cerezo@gmail.com>  Tue, 02 May 2017 07:00:55 +0200
 
 nautilus-crusher (0.1.1-1ubuntu0) xenial; urgency=low
 
