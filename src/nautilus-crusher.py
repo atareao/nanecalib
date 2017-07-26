@@ -127,12 +127,13 @@ class Progreso(Gtk.Dialog):
 
 
 def crush_file(file_in, diib):
+    size = get_duration(file_in)
     diib.emit('start_one', os.path.basename(file_in))
     rutine = 'srm -lvr "%s"' % (file_in)
     args = shlex.split(rutine)
     process = subprocess.Popen(args, stdout=subprocess.PIPE)
     out, err = process.communicate()
-    diib.emit('end_one', get_duration(file_in) / diib.total_size)
+    diib.emit('end_one', size / diib.total_size)
 
 
 class DoItInBackground(GObject.GObject):
