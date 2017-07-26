@@ -97,17 +97,13 @@ class Progreso(Gtk.Dialog):
                      ypadding=5,
                      xoptions=Gtk.AttachOptions.SHRINK)
         self.stop = False
-        self.current_size = 0.0
-        self.total_size = 0.0
+        self.fraction = 0.0
         self.is_running = False
 
         self.show_all()
 
     def emit(self, *args):
         GLib.idle_add(GObject.GObject.emit, self, *args)
-
-    def set_total_size(self, total_size):
-        self.total_size = float(total_size)
 
     def get_stop(self):
         return self.stop
@@ -120,16 +116,11 @@ class Progreso(Gtk.Dialog):
         self.destroy()
 
     def increase(self, widget=None, x=1.0):
-        self.current_size += float(x)
-        if self.current_size == self.total_size:
+        self.fraction += float(x)
+        if round(self.fraction, 5) >= 1.0:
             GLib.idle_add(self.destroy)
         else:
-            fraction = float(self.current_size) / float(self.total_size)
-            print('////', fraction, '////')
-            if round(fraction, 5) >= 1.0:
-                GLib.idle_add(self.destroy)
-            else:
-                GLib.idle_add(self.progressbar.set_fraction, fraction)
+            GLib.idle_add(self.progressbar.set_fraction, self.fraction)
 
     def set_element(self, widget=None, element=''):
         GLib.idle_add(self.label.set_text, str(element))
@@ -141,7 +132,7 @@ def crush_file(file_in, diib):
     args = shlex.split(rutine)
     process = subprocess.Popen(args, stdout=subprocess.PIPE)
     out, err = process.communicate()
-    diib.emit('end_one', get_duration(file_in))
+    diib.emit('end_one', get_duration(file_in) / diib.total_size)
 
 
 class DoItInBackground(GObject.GObject):
@@ -157,8 +148,8 @@ class DoItInBackground(GObject.GObject):
         self.files = files
         self.stopit = False
         self.ok = True
+        self.total_size = get_total_duration(files)
         self.progreso = Progreso(title, parent)
-        self.progreso.set_total_size(get_total_duration(files))
         self.progreso.connect('i-want-stop', self.stop)
         self.connect('start_one', self.progreso.set_element)
         self.connect('end_one', self.progreso.increase)
@@ -169,14 +160,11 @@ class DoItInBackground(GObject.GObject):
         GLib.idle_add(GObject.GObject.emit, self, *args)
 
     def stop(self, *args):
-        for task in self.tasks:
-            if task['task'].is_running():
-                task['task'].cancel()
-                self.emit('end_one', get_duration(task['file']))
+        self.stopit = True
 
     def run(self):
         try:
-            executor = futures.ThreadPoolExecutor()
+            executor = futures.ThreadPoolExecutor(THREADS)
             for afile in self.files:
                 if self.stopit is True:
                     break
@@ -187,7 +175,8 @@ class DoItInBackground(GObject.GObject):
                 for task in self.tasks:
                     if task['task'].is_running():
                         task['task'].cancel()
-                        self.emit('end_one', get_duration(task['file']))
+                        self.emit('end_one',
+                                  get_duration(task['file']) / self.total_size)
             self.progreso.run()
         except Exception as e:
             self.ok = False
