@@ -37,8 +37,7 @@ from gi.repository import GLib
 from gi.repository import GObject
 from gi.repository import Nautilus as FileManager
 import os
-import subprocess
-import shlex
+from plumbum import local
 from multiprocessing import cpu_count
 from concurrent import futures
 
@@ -129,10 +128,12 @@ class Progreso(Gtk.Dialog):
 def crush_file(file_in, diib):
     size = get_duration(file_in)
     diib.emit('start_one', os.path.basename(file_in))
-    rutine = 'srm -lvr "%s"' % (file_in)
-    args = shlex.split(rutine)
-    process = subprocess.Popen(args, stdout=subprocess.PIPE)
-    out, err = process.communicate()
+    srm = local['srm']
+    srm['-lvr', "{}".format(file_in)]()
+    # rutine = 'srm -lvr "%s"' % (file_in)
+    # args = shlex.split(rutine)
+    # process = subprocess.Popen(args, stdout=subprocess.PIPE)
+    # out, err = process.communicate()
     diib.emit('end_one', size / diib.total_size)
 
 
@@ -216,7 +217,7 @@ class CrushFileMenuProvider(GObject.GObject, FileManager.MenuProvider):
         File Manager crashes if a plugin doesn't implement the __init__\
         method
         """
-        pass
+        GObject.GObject.__init__(self)
 
     def all_are_files(self, items):
         gvfs = Gio.Vfs.get_default()
