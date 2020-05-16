@@ -1,30 +1,32 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# This file is part of nautilus-convert2ogg
+# This file is part of nautilus-crusher
 #
-# Copyright (C) 2012-2016 Lorenzo Carbonell
-# lorenzo.carbonell.cerezo@gmail.com
+# Copyright (c) 2016 Lorenzo Carbonell Cerezo <a.k.a. atareao>
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
 #
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-#
-#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+
 import gi
 try:
     gi.require_version('Gtk', '3.0')
-    gi.require_version('Gio', '2.0')
     gi.require_version('GLib', '2.0')
     gi.require_version('GObject', '2.0')
     gi.require_version('Nautilus', '3.0')
@@ -32,7 +34,6 @@ except Exception as e:
     print(e)
     exit(-1)
 from gi.repository import Gtk
-from gi.repository import Gio
 from gi.repository import GLib
 from gi.repository import GObject
 from gi.repository import Nautilus as FileManager
@@ -66,19 +67,19 @@ class Progreso(Gtk.Dialog):
         vbox = Gtk.VBox(spacing=5)
         vbox.set_border_width(5)
         self.get_content_area().add(vbox)
-        #
+
         frame1 = Gtk.Frame()
         vbox.pack_start(frame1, True, True, 0)
         table = Gtk.Table(2, 2, False)
         frame1.add(table)
-        #
+
         self.label = Gtk.Label()
         table.attach(self.label, 0, 2, 0, 1,
                      xpadding=5,
                      ypadding=5,
                      xoptions=Gtk.AttachOptions.SHRINK,
                      yoptions=Gtk.AttachOptions.EXPAND)
-        #
+
         self.progressbar = Gtk.ProgressBar()
         self.progressbar.set_size_request(300, 0)
         table.attach(self.progressbar, 0, 1, 1, 2,
@@ -130,10 +131,6 @@ def crush_file(file_in, diib):
     diib.emit('start_one', os.path.basename(file_in))
     srm = local['srm']
     srm['-lvr', "{}".format(file_in)]()
-    # rutine = 'srm -lvr "%s"' % (file_in)
-    # args = shlex.split(rutine)
-    # process = subprocess.Popen(args, stdout=subprocess.PIPE)
-    # out, err = process.communicate()
     diib.emit('end_one', size / diib.total_size)
 
 
@@ -199,10 +196,8 @@ def get_duration(file_in):
 
 def get_files(files_in):
     files = []
-    gvfs = Gio.Vfs.get_default()
     for file_in in files_in:
-        print(type(file_in), file_in)
-        files.append(gvfs.get_file_for_uri(file_in.get_uri()).get_path())
+        files.append(file_in.get_location().get_path())
     return files
 
 
@@ -220,10 +215,8 @@ class CrushFileMenuProvider(GObject.GObject, FileManager.MenuProvider):
         GObject.GObject.__init__(self)
 
     def all_are_files(self, items):
-        gvfs = Gio.Vfs.get_default()
         for item in items:
-            file_in = gvfs.get_file_for_uri(item.get_uri()).get_path()
-            if not os.path.isfile(file_in):
+            if item.is_directory():
                 return False
         return True
 
@@ -269,20 +262,26 @@ class CrushFileMenuProvider(GObject.GObject, FileManager.MenuProvider):
         ad = Gtk.AboutDialog(parent=window)
         ad.set_name(APPNAME)
         ad.set_version(VERSION)
-        ad.set_copyright('Copyrignt (c) 2016-2017\nLorenzo Carbonell')
+        ad.set_copyright('Copyrignt (c) 2016\nLorenzo Carbonell')
         ad.set_comments(APPNAME)
         ad.set_license('''
-This program is free software: you can redistribute it and/or modify it under
-the terms of the GNU General Public License as published by the Free Software
-Foundation, either version 3 of the License, or (at your option) any later
-version.
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
-This program is distributed in the hope that it will be useful, but WITHOUT
-ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
 
-You should have received a copy of the GNU General Public License along with
-this program. If not, see <http://www.gnu.org/licenses/>.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 ''')
         ad.set_website('http://www.atareao.es')
         ad.set_website_label('http://www.atareao.es')
