@@ -26,10 +26,11 @@ codefactor-badge: True
 <h1 align="center">Welcome to <span id="project_title">Nautilus Crusher</span> 👋</h1>
 <p>
 <a href="https://www.atareao.es" id="homepage" rel="nofollow">
-<img id="icon" src="data/nautilus-crusher.svg"/>
+<img id="icon" width="128" height="128" align="right" src="data/nautilus-crusher.svg"/>
 </a>
 </p>
 <h2>🏠 <a href="https://www.atareao.es" id="homepage">Homepage</a></h2>
+
 
 <!-- end description -->
 
@@ -42,12 +43,16 @@ Before you begin, ensure you have met the following requirements:
 * If you clone the repository, you need, at least, these dependecies,
 
 ```
+python3
+python3-gi
+python3-cairo
+python3-nautilus
+python3-plumbum
 gir1.2-gtk-3.0
-gir1.2-glib-2.0
-gir1.2-gdkpixbuf-2.0
-gir1.2-appindicator3-0.1
-gir1.2-keybinder-3.0
+gir1.2-nautilus-3.0
+secure-delete
 ```
+
 
 
 
@@ -70,12 +75,14 @@ sudo apt install nautilus-crusher
 
 
 
+
 <!-- end installing -->
 
 <!-- start using -->
 ## Using <span id="project_title">Nautilus Crusher</span>
 
 When you start <strong><span id="project_title">Nautilus Crusher</span></strong> it goes to Indicator Area, as you can see in the next screenshot,
+
 <!-- end using -->
 
 <!-- start contributing -->
@@ -92,12 +99,14 @@ To contribute to **<span id="project_title">Nautilus Crusher</span>**, follow th
 Alternatively see the GitHub documentation on [creating a pull request](https://help.github.com/en/github/collaborating-with-issues-and-pull-requests/creating-a-pull-request).
 </location></project_name></commit_message></branch_name>
 
+
 <!-- end contributing -->
 
 <!-- start contributors -->
 ## 👤 Contributors ✨
 
 Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/docs/en/emoji-key)):
+
 
 
 
