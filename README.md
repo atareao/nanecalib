@@ -4,7 +4,7 @@
 project_title: Nautilus Crusher
 github_project: https://github.com/atareao/nautilus-crusher
 license: MIT
-icon: /datos/Sync/Programacion/Python/readmemaker/icon
+icon: /datos/Sync/Programacion/Nautilus/nautilus-crusher/data/nautilus-crusher.svg
 homepage: https://www.atareao.es
 license-badge: True
 contributors-badge: True
@@ -26,12 +26,10 @@ codefactor-badge: True
 <h1 align="center">Welcome to <span id="project_title">Nautilus Crusher</span> 👋</h1>
 <p>
 <a href="https://www.atareao.es" id="homepage" rel="nofollow">
-<img id="icon" src="../../Python/readmemaker/icon"/>
+<img id="icon" src="data/nautilus-crusher.svg"/>
 </a>
 </p>
 <h2>🏠 <a href="https://www.atareao.es" id="homepage">Homepage</a></h2>
-
-
 
 <!-- end description -->
 
@@ -53,6 +51,7 @@ gir1.2-keybinder-3.0
 
 
 
+
 <!-- end prerequisites -->
 
 <!-- start installing -->
@@ -65,8 +64,9 @@ To install <span id="project_title">Nautilus Crusher</span>, follow these steps:
 ```
 sudo add-apt-repository ppa:atareao/atareao
 sudo apt update
-sudo apt install tasker
+sudo apt install nautilus-crusher
 ```
+
 
 
 
@@ -76,49 +76,6 @@ sudo apt install tasker
 ## Using <span id="project_title">Nautilus Crusher</span>
 
 When you start <strong><span id="project_title">Nautilus Crusher</span></strong> it goes to Indicator Area, as you can see in the next screenshot,
-
-![tasker](./screenshots/screenshot_01.png)
-
-In this screenshot, the language is Spanish, but, if there is no translation for your language, you will find the app in English.
-
-You can set some options in order to start  <strong><span id="project_title">Nautilus Crusher</span></strong> when you start your Operative System.
-
-* Set the icon theme. Dark or light.
-* Start <span id="project_title">Nautilus Crusher</span> with your Operative System
-* Set the number of tasks you want to show in the indicator menu
-* Set the tasks files. The file must follow the Todo.txt syntax.
-
-![Example 2](./screenshots/screenshot_06.png)
-
-You can add so many projects as you need in the configuration dialog, as you can see in the next screenshot.
-
-![Example 2](./screenshots/screenshot_07.png)
-
-Same, for contexts.
-
-![Example 2](./screenshots/screenshot_08.png)
-
-You can add optional tags. Every tag can be or a string or a date. So you can add a *due* tag to set the date when the task must be completed or an *id* to save an special
-
-
-![Example 2](./screenshots/screenshot_09.png)
-
-Besides you can set the colors of the graphics
-
-![Configuration](./screenshots/screenshot_02.png)
-
-In the next screenshot you can see the about
-
-![About](./screenshots/screenshot_03.png)
-
-In the next screenshots you can see some samples of my use of *tasker*,
-
-![Example 1](./screenshots/screenshot_04.png)
-
-![Example 2](./screenshots/screenshot_05.png)
-
-
-
 <!-- end using -->
 
 <!-- start contributing -->
@@ -135,13 +92,13 @@ To contribute to **<span id="project_title">Nautilus Crusher</span>**, follow th
 Alternatively see the GitHub documentation on [creating a pull request](https://help.github.com/en/github/collaborating-with-issues-and-pull-requests/creating-a-pull-request).
 </location></project_name></commit_message></branch_name>
 
-
 <!-- end contributing -->
 
 <!-- start contributors -->
 ## 👤 Contributors ✨
 
 Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/docs/en/emoji-key)):
+
 
 
 
