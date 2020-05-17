@@ -38,16 +38,22 @@ from gi.repository import GLib
 from gi.repository import GObject
 from gi.repository import Nautilus as FileManager
 import os
+import locale
+import gettext
 from plumbum import local
 from multiprocessing import cpu_count
 from concurrent import futures
 
 THREADS = 5 * cpu_count()
-APPNAME = '$APP$'
+APP = '$APP$'
 ICON = '$APP$'
 VERSION = '$VERSION$'
+LANGDIR = os.path.join('usr', 'share', 'locale-langpack')
 
-_ = str
+current_locale, encoding = locale.getdefaultlocale()
+language = gettext.translation(APP, LANGDIR, [current_locale])
+language.install()
+_ = language.gettext
 
 
 class Progreso(Gtk.Dialog):
@@ -260,10 +266,10 @@ class CrushFileMenuProvider(GObject.GObject, FileManager.MenuProvider):
 
     def about(self, widget, window):
         ad = Gtk.AboutDialog(parent=window)
-        ad.set_name(APPNAME)
+        ad.set_name(APP)
         ad.set_version(VERSION)
         ad.set_copyright('Copyrignt (c) 2016\nLorenzo Carbonell')
-        ad.set_comments(APPNAME)
+        ad.set_comments(APP)
         ad.set_license('''
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -290,6 +296,6 @@ SOFTWARE.
         ad.set_documenters([
             'Lorenzo Carbonell <lorenzo.carbonell.cerezo@gmail.com>'])
         ad.set_icon_name(ICON)
-        ad.set_logo_icon_name(APPNAME)
+        ad.set_logo_icon_name(APP)
         ad.run()
         ad.destroy()
