@@ -1,8 +1,8 @@
-nautilus-crusher (0.3.2-0extras20.04.1) focal; urgency=medium
+nautilus-crusher (0.3.2-0extras20.04.2) focal; urgency=medium
 
   * Clean and improve 
 
- -- Lorenzo Carbonell <lorenzo.carbonell.cerezo@gmail.com>  Sat, 16 May 2020 11:46:03 +0200
+ -- Lorenzo Carbonell <lorenzo.carbonell.cerezo@gmail.com>  Sun, 17 May 2020 20:11:51 +0200
 
 nautilus-crusher (0.3.1-0extras20.04.1) focal; urgency=medium
 
