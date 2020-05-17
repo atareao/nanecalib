@@ -20,16 +20,16 @@ msgstr ""
 
 #: src/nautilus-crusher.py:231
 msgid "Crush file"
-msgstr ""
+msgstr "Descruye archivo"
 
 #: src/nautilus-crusher.py:243 src/nautilus-crusher.py:250
 msgid "Crush"
-msgstr ""
+msgstr "Destruye"
 
 #: src/nautilus-crusher.py:244 src/nautilus-crusher.py:251
 msgid "Tool to crush files"
-msgstr ""
+msgstr "Destruir archivos"
 
 #: src/nautilus-crusher.py:259 src/nautilus-crusher.py:260
 msgid "About"
-msgstr ""
+msgstr "Acerca de"
