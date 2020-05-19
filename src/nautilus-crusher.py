@@ -27,6 +27,7 @@
 import gi
 try:
     gi.require_version('Gtk', '3.0')
+    gi.require_version('Gdk', '3.0')
     gi.require_version('GLib', '2.0')
     gi.require_version('GObject', '2.0')
     gi.require_version('Nautilus', '3.0')
@@ -34,6 +35,7 @@ except Exception as e:
     print(e)
     exit(-1)
 from gi.repository import Gtk
+from gi.repository import Gdk
 from gi.repository import GLib
 from gi.repository import GObject
 from gi.repository import Nautilus as FileManager
@@ -41,10 +43,8 @@ import os
 import locale
 import gettext
 from plumbum import local
-from multiprocessing import cpu_count
 from concurrent import futures
 
-THREADS = 5 * cpu_count()
 APP = '$APP$'
 ICON = '$APP$'
 VERSION = '$VERSION$'
@@ -62,51 +62,58 @@ class Progreso(Gtk.Dialog):
     }
 
     def __init__(self, title, parent):
-        Gtk.Dialog.__init__(self, title, parent,
-                            Gtk.DialogFlags.MODAL |
-                            Gtk.DialogFlags.DESTROY_WITH_PARENT)
-        self.set_position(Gtk.WindowPosition.CENTER_ALWAYS)
-        self.set_size_request(330, 30)
-        self.set_resizable(False)
-        self.connect('destroy', self.close)
+        Gtk.Dialog.__init__(self, title, parent)
         self.set_modal(True)
-        vbox = Gtk.VBox(spacing=5)
+        self.set_destroy_with_parent(True)
+        self.set_resizable(False)
+        self.set_icon_name(ICON)
+        self.set_size_request(330, 30)
+        self.connect('destroy', self.close)
+        self.connect('realize', self.on_realize)
+        self.init_ui()
+        self.stop = False
+        self.show_all()
+        self.value = 0.0
+
+    def init_ui(self):
+        vbox = Gtk.Box(Gtk.Orientation.VERTICAL, 5)
         vbox.set_border_width(5)
         self.get_content_area().add(vbox)
 
         frame1 = Gtk.Frame()
-        vbox.pack_start(frame1, True, True, 0)
-        table = Gtk.Table(2, 2, False)
-        frame1.add(table)
+        vbox.add(frame1)
+
+        grid = Gtk.Grid()
+        grid.set_row_spacing(10)
+        grid.set_column_spacing(10)
+        grid.set_margin_bottom(10)
+        grid.set_margin_start(10)
+        grid.set_margin_end(10)
+        grid.set_margin_top(10)
+        frame1.add(grid)
 
         self.label = Gtk.Label()
-        table.attach(self.label, 0, 2, 0, 1,
-                     xpadding=5,
-                     ypadding=5,
-                     xoptions=Gtk.AttachOptions.SHRINK,
-                     yoptions=Gtk.AttachOptions.EXPAND)
+        grid.attach(self.label, 0, 0, 2, 1)
 
         self.progressbar = Gtk.ProgressBar()
         self.progressbar.set_size_request(300, 0)
-        table.attach(self.progressbar, 0, 1, 1, 2,
-                     xpadding=5,
-                     ypadding=5,
-                     xoptions=Gtk.AttachOptions.SHRINK,
-                     yoptions=Gtk.AttachOptions.EXPAND)
+        grid.attach(self.progressbar, 0, 1, 1, 1)
+
         button_stop = Gtk.Button()
         button_stop.set_size_request(40, 40)
         button_stop.set_image(
             Gtk.Image.new_from_stock(Gtk.STOCK_STOP, Gtk.IconSize.BUTTON))
         button_stop.connect('clicked', self.on_button_stop_clicked)
-        table.attach(button_stop, 1, 2, 1, 2,
-                     xpadding=5,
-                     ypadding=5,
-                     xoptions=Gtk.AttachOptions.SHRINK)
-        self.stop = False
-        self.fraction = 0.0
-        self.is_running = False
+        grid.attach(1, 1, 1, 1)
 
-        self.show_all()
+    def on_realize(self, *_):
+        monitor = Gdk.Display.get_primary_monitor(Gdk.Display.get_default())
+        scale = monitor.get_scale_factor()
+        monitor_width = monitor.get_geometry().width / scale
+        monitor_height = monitor.get_geometry().height / scale
+        width = self.get_preferred_width()[0]
+        height = self.get_preferred_height()[0]
+        self.move((monitor_width - width)/2, (monitor_height - height)/2)
 
     def emit(self, *args):
         GLib.idle_add(GObject.GObject.emit, self, *args)
@@ -122,11 +129,11 @@ class Progreso(Gtk.Dialog):
         self.destroy()
 
     def increase(self, widget=None, x=1.0):
-        self.fraction += float(x)
-        if round(self.fraction, 5) >= 1.0:
+        self.value += float(x)
+        if round(self.value, 5) >= 1.0:
             GLib.idle_add(self.destroy)
         else:
-            GLib.idle_add(self.progressbar.set_fraction, self.fraction)
+            GLib.idle_add(self.progressbar.set_fraction, self.value)
 
     def set_element(self, widget=None, element=''):
         GLib.idle_add(self.label.set_text, str(element))
@@ -169,7 +176,7 @@ class DoItInBackground(GObject.GObject):
 
     def run(self):
         try:
-            executor = futures.ThreadPoolExecutor(THREADS)
+            executor = futures.ThreadPoolExecutor()
             for afile in self.files:
                 if self.stopit is True:
                     break

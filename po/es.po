@@ -1,13 +1,13 @@
 # Spanish translations for nautilus-crusher package.
 # Copyright (C) 2020 THE PACKAGE'S COPYRIGHT HOLDER
 # This file is distributed under the same license as the nautilus-crusher package.
-# Lorenzo <Ãlorenzo.carbonell.cerezo@gmail.comÃlorenzo.carbonell.cerezo@gmail.com>, 2020.
+# Lorenzo <lorenzo.carbonell.cerezo@gmail.com>, 2020.
 #
 msgid ""
 msgstr ""
 "Project-Id-Version: nautilus-crusher - 0.3.2-0extras20.04.1\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2020-05-17 20:09+0200\n"
+"POT-Creation-Date: 2020-05-18 21:48+0200\n"
 "PO-Revision-Date: 2020-05-17 20:09+0200\n"
 "Last-Translator: Lorenzo <lorenzo.carbonell.cerezo@gmail.comlorenzo."
 "carbonell.cerezo@gmail.com>\n"
@@ -18,18 +18,18 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: src/nautilus-crusher.py:231
+#: src/nautilus-crusher.py:238
 msgid "Crush file"
 msgstr "Descruye archivo"
 
-#: src/nautilus-crusher.py:243 src/nautilus-crusher.py:250
+#: src/nautilus-crusher.py:250 src/nautilus-crusher.py:257
 msgid "Crush"
 msgstr "Destruye"
 
-#: src/nautilus-crusher.py:244 src/nautilus-crusher.py:251
+#: src/nautilus-crusher.py:251 src/nautilus-crusher.py:258
 msgid "Tool to crush files"
 msgstr "Destruir archivos"
 
-#: src/nautilus-crusher.py:259 src/nautilus-crusher.py:260
+#: src/nautilus-crusher.py:266 src/nautilus-crusher.py:267
 msgid "About"
 msgstr "Acerca de"
