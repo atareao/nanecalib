@@ -139,14 +139,6 @@ class Progreso(Gtk.Dialog):
         GLib.idle_add(self.label.set_text, str(element))
 
 
-def crush_file(file_in, diib):
-    size = get_duration(file_in)
-    diib.emit('start_one', os.path.basename(file_in))
-    srm = local['srm']
-    srm['-lvr', "{}".format(file_in)]()
-    diib.emit('end_one', size / diib.total_size)
-
-
 class DoItInBackground(GObject.GObject):
     __gsignals__ = {
         'started': (GObject.SIGNAL_RUN_FIRST, GObject.TYPE_NONE, (int,)),
@@ -160,7 +152,7 @@ class DoItInBackground(GObject.GObject):
         self.files = files
         self.stopit = False
         self.ok = True
-        self.total_size = get_total_duration(files)
+        self.total_duration = get_total_duration(files)
         self.progreso = Progreso(title, parent)
         self.progreso.connect('i-want-stop', self.stop)
         self.connect('start_one', self.progreso.set_element)
@@ -180,15 +172,16 @@ class DoItInBackground(GObject.GObject):
             for afile in self.files:
                 if self.stopit is True:
                     break
-                task = executor.submit(crush_file, afile, self)
+                task = executor.submit(process_item, afile, self)
                 self.tasks.append({'file': afile,
                                    'task': task})
             if self.stopit is True:
                 for task in self.tasks:
                     if task['task'].is_running():
                         task['task'].cancel()
-                        self.emit('end_one',
-                                  get_duration(task['file']) / self.total_size)
+                        self.emit(
+                            'end_one',
+                            get_duration(task['file']) / self.total_duration)
             self.progreso.run()
         except Exception as e:
             self.ok = False
@@ -214,6 +207,14 @@ def get_files(files_in):
     return files
 
 
+def process_item(file_in, diib):
+    duration = get_duration(file_in)
+    diib.emit('start_one', os.path.basename(file_in))
+    srm = local['srm']
+    srm['-lvr', "{}".format(file_in)]()
+    diib.emit('end_one', duration / diib.total_duration)
+
+
 class CrushFileMenuProvider(GObject.GObject, FileManager.MenuProvider):
     """
     Implements the 'Replace in Filenames' extension to the File Manager\
@@ -227,16 +228,16 @@ class CrushFileMenuProvider(GObject.GObject, FileManager.MenuProvider):
         """
         GObject.GObject.__init__(self)
 
+    def process(self, menu, selected, window):
+        files = get_files(selected)
+        diib = DoItInBackground(_('Crush file'), window, files)
+        diib.run()
+
     def all_are_files(self, items):
         for item in items:
             if item.is_directory():
                 return False
         return True
-
-    def convert(self, menu, selected, window):
-        files = get_files(selected)
-        diib = DoItInBackground(_('Crush file'), window, files)
-        diib.run()
 
     def get_file_items(self, window, sel_items):
         """
@@ -257,7 +258,7 @@ class CrushFileMenuProvider(GObject.GObject, FileManager.MenuProvider):
                 label=_('Crush'),
                 tip=_('Tool to crush files'))
             sub_menuitem_00.connect('activate',
-                                    self.convert,
+                                    self.process,
                                     sel_items,
                                     window)
             submenu.append_item(sub_menuitem_00)
@@ -296,12 +297,12 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ''')
-        ad.set_website('http://www.atareao.es')
-        ad.set_website_label('http://www.atareao.es')
+        ad.set_website('https://www.atareao.es')
+        ad.set_website_label('atareao.es')
         ad.set_authors([
-            'Lorenzo Carbonell <lorenzo.carbonell.cerezo@gmail.com>'])
+            'Lorenzo Carbonell <a.k.a. atareao>'])
         ad.set_documenters([
-            'Lorenzo Carbonell <lorenzo.carbonell.cerezo@gmail.com>'])
+            'Lorenzo Carbonell <a.k.a. atareao>'])
         ad.set_icon_name(ICON)
         ad.set_logo_icon_name(APP)
         ad.run()
