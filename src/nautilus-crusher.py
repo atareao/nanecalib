@@ -104,7 +104,7 @@ class Progreso(Gtk.Dialog):
         button_stop.set_image(
             Gtk.Image.new_from_stock(Gtk.STOCK_STOP, Gtk.IconSize.BUTTON))
         button_stop.connect('clicked', self.on_button_stop_clicked)
-        grid.attach(1, 1, 1, 1)
+        grid.attach(button_stop, 1, 1, 1, 1)
 
     def on_realize(self, *_):
         monitor = Gdk.Display.get_primary_monitor(Gdk.Display.get_default())
