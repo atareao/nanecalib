@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# This file is part of nautilus-crusher
+# This file is part of nanecalib 
 #
-# Copyright (c) 2016 Lorenzo Carbonell Cerezo <a.k.a. atareao>
+# Copyright (c) 2020 Lorenzo Carbonell Cerezo <a.k.a. atareao>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -30,7 +30,6 @@ try:
     gi.require_version('Gdk', '3.0')
     gi.require_version('GLib', '2.0')
     gi.require_version('GObject', '2.0')
-    gi.require_version('Nautilus', '3.0')
 except Exception as e:
     print(e)
     exit(-1)
@@ -38,22 +37,8 @@ from gi.repository import Gtk
 from gi.repository import Gdk
 from gi.repository import GLib
 from gi.repository import GObject
-from gi.repository import Nautilus as FileManager
 import os
-import locale
-import gettext
-from plumbum import local
 from concurrent import futures
-
-APP = '$APP$'
-ICON = '$APP$'
-VERSION = '$VERSION$'
-LANGDIR = os.path.join('usr', 'share', 'locale-langpack')
-
-current_locale, encoding = locale.getdefaultlocale()
-language = gettext.translation(APP, LANGDIR, [current_locale])
-language.install()
-_ = language.gettext
 
 
 class Progreso(Gtk.Dialog):
@@ -61,12 +46,13 @@ class Progreso(Gtk.Dialog):
         'i-want-stop': (GObject.SIGNAL_RUN_FIRST, GObject.TYPE_NONE, ()),
     }
 
-    def __init__(self, title, parent):
+    def __init__(self, title, parent, icon=None):
         Gtk.Dialog.__init__(self, title, parent)
         self.set_modal(True)
         self.set_destroy_with_parent(True)
         self.set_resizable(False)
-        self.set_icon_name(ICON)
+        if icon:
+            self.set_icon_name(icon)
         self.set_size_request(330, 30)
         self.connect('destroy', self.close)
         self.connect('realize', self.on_realize)
@@ -147,13 +133,13 @@ class DoItInBackground(GObject.GObject):
         'end_one': (GObject.SIGNAL_RUN_FIRST, GObject.TYPE_NONE, (float,)),
     }
 
-    def __init__(self, title, parent, files):
+    def __init__(self, title, parent, files, icon=None):
         GObject.GObject.__init__(self)
         self.files = files
         self.stopit = False
         self.ok = True
-        self.total_duration = get_total_duration(files)
-        self.progreso = Progreso(title, parent)
+        self.total_duration = self.get_total_duration(files)
+        self.progreso = Progreso(title, parent, icon)
         self.progreso.connect('i-want-stop', self.stop)
         self.connect('start_one', self.progreso.set_element)
         self.connect('end_one', self.progreso.increase)
@@ -172,138 +158,37 @@ class DoItInBackground(GObject.GObject):
             for afile in self.files:
                 if self.stopit is True:
                     break
-                task = executor.submit(process_item, afile, self)
+                task = executor.submit(self.__process_item, afile)
                 self.tasks.append({'file': afile,
                                    'task': task})
             if self.stopit is True:
                 for task in self.tasks:
                     if task['task'].is_running():
                         task['task'].cancel()
+                        duration = self.get_duration(task['file'])
                         self.emit(
                             'end_one',
-                            get_duration(task['file']) / self.total_duration)
+                            duration / self.total_duration)
             self.progreso.run()
         except Exception as e:
             self.ok = False
             print(e)
         self.emit('ended', self.ok)
 
+    def get_total_duration(self, files):
+        total_duration = 0.0
+        for afile in files:
+            total_duration += float(os.path.getsize(afile))
+        return total_duration
 
-def get_total_duration(files):
-    total_duration = 0.0
-    for afile in files:
-        total_duration += float(os.path.getsize(afile))
-    return total_duration
+    def get_duration(self, file_in):
+        return float(os.path.getsize(file_in))
 
+    def __process_item(self, file_in):
+        duration = self.get_duration(file_in)
+        diib.emit('start_one', os.path.basename(file_in))
+        self.process_item(file_in)
+        diib.emit('end_one', duration / diib.total_duration)
 
-def get_duration(file_in):
-    return float(os.path.getsize(file_in))
-
-
-def get_files(files_in):
-    files = []
-    for file_in in files_in:
-        files.append(file_in.get_location().get_path())
-    return files
-
-
-def process_item(file_in, diib):
-    duration = get_duration(file_in)
-    diib.emit('start_one', os.path.basename(file_in))
-    srm = local['srm']
-    srm['-lvr', "{}".format(file_in)]()
-    diib.emit('end_one', duration / diib.total_duration)
-
-
-class CrushFileMenuProvider(GObject.GObject, FileManager.MenuProvider):
-    """
-    Implements the 'Replace in Filenames' extension to the File Manager\
-    right-click menu
-    """
-
-    def __init__(self):
-        """
-        File Manager crashes if a plugin doesn't implement the __init__\
-        method
-        """
-        GObject.GObject.__init__(self)
-
-    def process(self, menu, selected, window):
-        files = get_files(selected)
-        diib = DoItInBackground(_('Crush file'), window, files)
-        diib.run()
-
-    def all_are_files(self, items):
-        for item in items:
-            if item.is_directory():
-                return False
-        return True
-
-    def get_file_items(self, window, sel_items):
-        """
-        Adds the 'Replace in Filenames' menu item to the File Manager\
-        right-click menu, connects its 'activate' signal to the 'run'\
-        method passing the selected Directory/File
-        """
-        if self.all_are_files(sel_items):
-            top_menuitem = FileManager.MenuItem(
-                name='CrushFileMenuProvider::Gtk-crushing-top',
-                label=_('Crush') + '...',
-                tip=_('Tool to crush files'))
-            submenu = FileManager.Menu()
-            top_menuitem.set_submenu(submenu)
-
-            sub_menuitem_00 = FileManager.MenuItem(
-                name='CrushFileMenuProvider::Gtk-crushing-sub-01',
-                label=_('Crush'),
-                tip=_('Tool to crush files'))
-            sub_menuitem_00.connect('activate',
-                                    self.process,
-                                    sel_items,
-                                    window)
-            submenu.append_item(sub_menuitem_00)
-            sub_menuitem_01 = FileManager.MenuItem(
-                name='CrushFileMenuProvider::Gtk-crushing-sub-02',
-                label=_('About'),
-                tip=_('About'))
-            sub_menuitem_01.connect('activate', self.about, window)
-            submenu.append_item(sub_menuitem_01)
-            #
-            return top_menuitem,
-        return
-
-    def about(self, widget, window):
-        ad = Gtk.AboutDialog(parent=window)
-        ad.set_name(APP)
-        ad.set_version(VERSION)
-        ad.set_copyright('Copyrignt (c) 2016\nLorenzo Carbonell')
-        ad.set_comments(APP)
-        ad.set_license('''
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-''')
-        ad.set_website('https://www.atareao.es')
-        ad.set_website_label('atareao.es')
-        ad.set_authors([
-            'Lorenzo Carbonell <a.k.a. atareao>'])
-        ad.set_documenters([
-            'Lorenzo Carbonell <a.k.a. atareao>'])
-        ad.set_icon_name(ICON)
-        ad.set_logo_icon_name(APP)
-        ad.run()
-        ad.destroy()
+    def process_item(self, file_in):
+        pass

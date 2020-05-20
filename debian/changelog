@@ -1,36 +1,5 @@
-nautilus-crusher (0.4.0-0extras20.04.6) focal; urgency=medium
-
-  * Add translation
-  * Add new icons
-
- -- Lorenzo Carbonell <lorenzo.carbonell.cerezo@gmail.com>  Tue, 19 May 2020 07:12:59 +0200
-
-nautilus-crusher (0.3.2-0extras20.04.4) focal; urgency=medium
-
-  * Clean and improve 
-
- -- Lorenzo Carbonell <lorenzo.carbonell.cerezo@gmail.com>  Sun, 17 May 2020 21:36:59 +0200
-
-nautilus-crusher (0.3.1-0extras20.04.1) focal; urgency=medium
-
-  * Plumbum
-
- -- Lorenzo Carbonell <lorenzo.carbonell.cerezo@gmail.com>  Sat, 16 May 2020 08:34:37 +0200
-
-nautilus-crusher (0.3.0-0extras17.04.5) zesty; urgency=medium
-
-  * Concurrent futures
-
- -- Lorenzo Carbonell <lorenzo.carbonell.cerezo@gmail.com>  Wed, 26 Jul 2017 17:35:25 +0200
-
-nautilus-crusher (0.2.0-0extras16.04.4) xenial; urgency=medium
-
-  * updated icon
-
- -- Lorenzo Carbonell <lorenzo.carbonell.cerezo@gmail.com>  Tue, 02 May 2017 07:00:55 +0200
-
-nautilus-crusher (0.1.1-1ubuntu0) xenial; urgency=low
+nanecalib (0.1.2-extras20.04.2) focal; urgency=low
 
   * First release
 
- -- Lorenzo Carbonell <lorenzo.carbonell.cerezo@gmail.com>  Wed, 23 Nov 2016 01:43:00 +0100
+ -- Lorenzo Carbonell <lorenzo.carbonell.cerezo@gmail.com>  Wed, 20 May 2020 06:26:22 +0200

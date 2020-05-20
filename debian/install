@@ -1,2 +1,1 @@
-src/*.py /usr/share/nautilus-python/extensions
-data/icons/hicolor /usr/share/icons
+src/*.py /usr/share/nanecalib
