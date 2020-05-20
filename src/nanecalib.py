@@ -186,9 +186,9 @@ class DoItInBackground(GObject.GObject):
 
     def __process_item(self, file_in):
         duration = self.get_duration(file_in)
-        diib.emit('start_one', os.path.basename(file_in))
+        self.emit('start_one', os.path.basename(file_in))
         self.process_item(file_in)
-        diib.emit('end_one', duration / diib.total_duration)
+        self.emit('end_one', duration / self.total_duration)
 
     def process_item(self, file_in):
         pass
