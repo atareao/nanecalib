@@ -93,7 +93,11 @@ class Progreso(Gtk.Dialog):
         grid.attach(button_stop, 1, 1, 1, 1)
 
     def on_realize(self, *_):
-        monitor = Gdk.Display.get_primary_monitor(Gdk.Display.get_default())
+        display = Gdk.Display.get_default()
+        seat = display.get_default_seat()
+        pointer = seat.get_pointer()
+        screen, x, y = pointer.get_position()
+        monitor = display.get_monitor_at_point(x, y)
         scale = monitor.get_scale_factor()
         monitor_width = monitor.get_geometry().width / scale
         monitor_height = monitor.get_geometry().height / scale
